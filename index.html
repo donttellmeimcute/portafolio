@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portafolio Retro TV 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Dela+Gothic+One&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyan: #4af5c7;
+            --cyan-dim: rgba(74, 245, 199, 0.15);
+            --magenta: #ff3a6e;
+            --dark: #050508;
+            --mid: #111118;
+            --light: #e4e4ef;
+            --amber: #ffb347;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: var(--dark);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--light);
+        }
+
+        canvas { display: block; }
+
+        /* ── CUSTOM CURSOR ── */
+        .cursor-dot {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: var(--cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s, background 0.2s;
+            mix-blend-mode: difference;
+        }
+        .cursor-dot.hovering {
+            width: 40px;
+            height: 40px;
+            background: var(--magenta);
+            mix-blend-mode: normal;
+            opacity: 0.5;
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid var(--cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, border-color 0.3s, opacity 0.3s;
+            opacity: 0.4;
+        }
+        .cursor-ring.hovering {
+            width: 60px;
+            height: 60px;
+            border-color: var(--magenta);
+            opacity: 0.3;
+        }
+
+        /* ── OVERLAY CORNERS ── */
+        #overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .corner-tag {
+            position: absolute;
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--light);
+            opacity: 0;
+            animation: fadeSlide 1s ease forwards;
+        }
+        .corner-tag.tl { top: 22px; left: 26px; animation-delay: 2.5s; }
+        .corner-tag.tr { top: 22px; right: 26px; text-align: right; animation-delay: 2.7s; }
+        .corner-tag.bl { bottom: 22px; left: 26px; animation-delay: 2.9s; }
+        .corner-tag.br { bottom: 22px; right: 26px; text-align: right; animation-delay: 3.1s; }
+
+        .corner-tag .dim { opacity: 0.3; }
+        .corner-tag .accent { color: var(--cyan); }
+
+        /* ── DECORATIVE CORNER BRACKETS ── */
+        .corner-bracket {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeSlide 1s ease 3.3s forwards;
+        }
+        .corner-bracket::before,
+        .corner-bracket::after {
+            content: '';
+            position: absolute;
+            background: var(--cyan);
+            opacity: 0.2;
+        }
+        .cb-tl { top: 14px; left: 14px; }
+        .cb-tl::before { top: 0; left: 0; width: 20px; height: 1px; }
+        .cb-tl::after { top: 0; left: 0; width: 1px; height: 20px; }
+        .cb-tr { top: 14px; right: 14px; }
+        .cb-tr::before { top: 0; right: 0; width: 20px; height: 1px; }
+        .cb-tr::after { top: 0; right: 0; width: 1px; height: 20px; }
+        .cb-bl { bottom: 14px; left: 14px; }
+        .cb-bl::before { bottom: 0; left: 0; width: 20px; height: 1px; }
+        .cb-bl::after { bottom: 0; left: 0; width: 1px; height: 20px; }
+        .cb-br { bottom: 14px; right: 14px; }
+        .cb-br::before { bottom: 0; right: 0; width: 20px; height: 1px; }
+        .cb-br::after { bottom: 0; right: 0; width: 1px; height: 20px; }
+
+        /* ── GLITCH HERO TITLE ── */
+        .hero-title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+            animation: heroIn 1.4s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+        }
+        .hero-title h1 {
+            font-family: 'Dela Gothic One', sans-serif;
+            font-size: clamp(28px, 5.5vw, 68px);
+            line-height: 1.05;
+            color: var(--light);
+            position: relative;
+        }
+        .hero-title h1::before,
+        .hero-title h1::after {
+            content: attr(data-text);
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        .hero-title h1::before {
+            color: var(--cyan);
+            clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+            animation: glitch1 4s infinite linear alternate;
+        }
+        .hero-title h1::after {
+            color: var(--magenta);
+            clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+            animation: glitch2 4s infinite linear alternate;
+        }
+        .hero-subtitle {
+            margin-top: 16px;
+            font-size: clamp(9px, 1.1vw, 12px);
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--cyan);
+            opacity: 0;
+            animation: fadeSlide 1s ease 2s forwards;
+        }
+        .hero-line {
+            width: 40px;
+            height: 1px;
+            background: var(--cyan);
+            margin: 14px auto 0;
+            opacity: 0;
+            animation: expandLine 0.8s ease 2.3s forwards;
+        }
+        .hero-title.hide {
+            animation: heroOut 0.6s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+        }
+
+        /* ── HOVER TOOLTIP ── */
+        #hover-label {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--dark);
+            background: var(--cyan);
+            padding: 5px 12px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            transform: translate(20px, 20px);
+            white-space: nowrap;
+        }
+        #hover-label::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--magenta);
+        }
+        #hover-label.visible { opacity: 1; }
+
+        /* ── VIGNETTE + GRAIN ── */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.7) 100%);
+        }
+
+        .scanline-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 6;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.035) 2px,
+                rgba(0,0,0,0.035) 4px
+            );
+        }
+
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 128px 128px;
+            animation: noiseShift 0.5s steps(4) infinite;
+        }
+
+        /* ── CLICK FLASH ── */
+        .click-flash {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+            background: var(--cyan);
+            opacity: 0;
+            animation: flashBang 0.35s ease-out forwards;
+        }
+
+        /* ── FPS COUNTER ── */
+        #fps {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            opacity: 0.2;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* ── LOADING ── */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: var(--dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        .loading-screen.done { opacity: 0; visibility: hidden; }
+        .loading-bar-track {
+            width: 200px;
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            overflow: hidden;
+            position: relative;
+        }
+        .loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 0 12px var(--cyan);
+        }
+        .loading-text {
+            font-size: 10px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--light);
+            opacity: 0.35;
+        }
+        .loading-pct {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            opacity: 0.5;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── KEYFRAMES ── */
+        @keyframes heroIn {
+            from { opacity: 0; transform: translate(-50%, -44%) scale(0.92); filter: blur(8px); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+        }
+        @keyframes heroOut {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+            to { opacity: 0; transform: translate(-50%, -56%) scale(1.04); filter: blur(6px); }
+        }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 0.4; transform: translateY(0); }
+        }
+        @keyframes expandLine {
+            from { opacity: 0; width: 0; }
+            to { opacity: 0.5; width: 40px; }
+        }
+        @keyframes glitch1 {
+            0%, 88% { transform: translate(0); }
+            90% { transform: translate(-3px, 1px); }
+            92% { transform: translate(2px, -1px); }
+            94% { transform: translate(0); }
+            100% { transform: translate(0); }
+        }
+        @keyframes glitch2 {
+            0%, 85% { transform: translate(0); }
+            87% { transform: translate(3px, -1px); }
+            89% { transform: translate(-2px, 2px); }
+            91% { transform: translate(0); }
+            100% { transform: translate(0); }
+        }
+        @keyframes flashBang {
+            0% { opacity: 0.25; }
+            100% { opacity: 0; }
+        }
+        @keyframes noiseShift {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-2px, 3px); }
+            50% { transform: translate(3px, -1px); }
+            75% { transform: translate(-1px, -2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* ── HIDE SYSTEM CURSOR ── */
+        * { cursor: none !important; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.173.0/build/three.module.js",
+                "three/webgpu": "https://unpkg.com/three@0.173.0/build/three.webgpu.js",
+                "three/tsl": "https://unpkg.com/three@0.173.0/build/three.tsl.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-ring" id="cursor-ring"></div>
+
+    <div class="loading-screen" id="loading">
+        <div class="loading-text">Cargando escena</div>
+        <div class="loading-bar-track">
+            <div class="loading-bar-fill" id="loading-bar"></div>
+        </div>
+        <div class="loading-pct" id="loading-pct">0%</div>
+    </div>
+
+    <div class="vignette"></div>
+    <div class="scanline-overlay"></div>
+    <div class="noise-overlay"></div>
+
+    <div id="overlay">
+        <div class="corner-bracket cb-tl"></div>
+        <div class="corner-bracket cb-tr"></div>
+        <div class="corner-bracket cb-bl"></div>
+        <div class="corner-bracket cb-br"></div>
+
+        <div class="corner-tag tl"><span class="accent">//</span> Portafolio <span class="dim">&mdash; 2026</span></div>
+        <div class="corner-tag tr"><span class="dim">engine:</span> <span class="accent">WebGPU</span></div>
+        <div class="corner-tag bl"><span class="dim">Click TV &rarr; ver proyecto</span></div>
+        <div class="corner-tag br"><span class="accent">&lt;/&gt;</span> <span class="dim">v2.0</span></div>
+    </div>
+
+    <div id="fps"></div>
+
+    <div class="hero-title" id="hero">
+        <h1 data-text="Create the things&#10;you wish existed">Create the things<br>you wish existed</h1>
+        <p class="hero-subtitle">Selecciona un proyecto</p>
+        <div class="hero-line"></div>
+    </div>
+
+    <div id="hover-label"></div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
